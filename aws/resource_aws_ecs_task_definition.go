@@ -84,6 +84,17 @@ func resourceAwsEcsTaskDefinition() *schema.Resource {
 				ValidateFunc: validateAwsEcsTaskDefinitionContainerDefinitions,
 			},
 
+			"proxy_configuration": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				StateFunc: func(v interface{}) string {
+					json, _ := structure.NormalizeJsonString(v)
+					return json
+				},
+                ValidateFunc: validateAwsEcsTaskDefinitionProxyConfiguration,
+			},
+
 			"task_role_arn": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -244,6 +255,16 @@ func validateAwsEcsTaskDefinitionContainerDefinitions(v interface{}, k string) (
 	return
 }
 
+func validateAwsEcsTaskDefinitionProxyConfiguration(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	_, err := expandEcsProxyConfiguration(value)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("ECS Task Definition proxy_configuration is invalid: %s", err))
+	}
+	return
+}
+
+
 func resourceAwsEcsTaskDefinitionCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).ecsconn
 
@@ -252,11 +273,25 @@ func resourceAwsEcsTaskDefinitionCreate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+/*	rawProxyConfiguration := d.Get("proxy_configuration").(string)
+	proxyConfiguration, err := expandEcsProxyConfiguration(rawProxyConfiguration)
+	if err != nil {
+		return err
+	}
+*/
 
 	input := ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions: definitions,
 		Family:               aws.String(d.Get("family").(string)),
 	}
+
+   if v, ok := d.GetOk("proxy_configuration"); ok {
+       proxyConfiguration, err := expandEcsProxyConfiguration(v.(string))
+       if err != nil {
+           return err
+        }
+        input.ProxyConfiguration = &proxyConfiguration
+    }
 
 	// ClientException: Tags can not be empty.
 	if v, ok := d.GetOk("tags"); ok {

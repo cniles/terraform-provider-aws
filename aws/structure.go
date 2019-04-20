@@ -165,6 +165,19 @@ func expandEcsContainerDefinitions(rawDefinitions string) ([]*ecs.ContainerDefin
 	return definitions, nil
 }
 
+// Takes JSON in a string. Decodes JSON into
+// an object of ecs.ProxyConfiguration
+func expandEcsProxyConfiguration(rawDefinitions string) (ecs.ProxyConfiguration, error) {
+    var configuration ecs.ProxyConfiguration
+
+	err := json.Unmarshal([]byte(rawDefinitions), &configuration)
+	if err != nil {
+		return configuration, fmt.Errorf("Error decoding JSON: %s", err)
+	}
+
+	return configuration, nil
+}
+
 // Takes the result of flatmap. Expand for an array of load balancers and
 // returns ecs.LoadBalancer compatible objects
 func expandEcsLoadBalancers(configured []interface{}) []*ecs.LoadBalancer {
